@@ -28,6 +28,8 @@ enum Parameter_Setting {
 	Set_Accel,
 	Set_Decel,
 	Set_Polarity,
+	Set_D_Brk,
+	Set_D_Brk_Decel,
 	Param_Num
 };
 
@@ -90,6 +92,7 @@ enum emcy_can_data {
 #define BRAKE_PARAM		0x3002		// ブレーキのパラメータ設定
 #define ENCODER_OBJ		0x6064		// エンコーダ情報
 #define POLARITY_OBJ	0x607E		// 極性
+#define D_BRAKE_PRAM	0x3007		// ダイナミックブレーキ設定
 
 // Sub-Index情報の定義
 #define SUB_INDEX_0		0x00
@@ -144,6 +147,8 @@ enum emcy_can_data {
 #define BRAKE_OFF		0x00000001
 #define POLARITY_REV	0x40
 #define READ_DATA		0
+#define D_BRK_ENABLE	1
+#define D_BRK_DECEL		45		// ダイナミックブレーキの減速度[rpm*100/s]
 
 
 /* Private variables ---------------------------------------------------------*/
@@ -572,6 +577,16 @@ uint8_t wheel_param_set(void) {
 		if (result == 1) {
 			parameter_set++;
 		}
+	} else if(parameter_set == Set_D_Brk){
+		// ダイナミックブレーキを有効にする
+		transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_1, D_BRK_ENABLE);
+		transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_1, D_BRK_ENABLE);
+		parameter_set++;
+	} else if(parameter_set == Set_D_Brk_Decel){
+		// ダイナミックブレーキの減速度を設定
+		transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_4, D_BRK_DECEL);
+		transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_4, D_BRK_DECEL);
+		parameter_set++;
 	} else if (parameter_set == Param_Num) {
 		// 設定完了
 		ret = 1;
