@@ -1,7 +1,7 @@
 [PreviousGenFiles]
-HeaderPath=C:/Users/katte/Desktop/TitraG1000/Inc
+HeaderPath=C:/Users/hoqta/Documents/fw_soft/TiTra-G-1000-v2_PROTO_PRO-M/Inc
 HeaderFiles=stm32f4xx_it.h;stm32f4xx_hal_conf.h;main.h;
-SourcePath=C:/Users/katte/Desktop/TitraG1000/Src
+SourcePath=C:/Users/hoqta/Documents/fw_soft/TiTra-G-1000-v2_PROTO_PRO-M/Src
 SourceFiles=stm32f4xx_it.c;stm32f4xx_hal_msp.c;main.c;
 
 [PreviousLibFiles]

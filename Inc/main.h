@@ -123,8 +123,8 @@ void enc_pulse_tim_cnt_reset(void);
 #define O_Wheel1Speed_GPIO_Port GPIOA
 #define O_AlarmCh1_Pin GPIO_PIN_2
 #define O_AlarmCh1_GPIO_Port GPIOH
-#define O_AlarmCh2_Pin GPIO_PIN_3
-#define O_AlarmCh2_GPIO_Port GPIOH
+#define O_Wheel_STO_Pin GPIO_PIN_3
+#define O_Wheel_STO_GPIO_Port GPIOH
 #define O_AlarmCh3_Pin GPIO_PIN_4
 #define O_AlarmCh3_GPIO_Port GPIOH
 #define O_AlarmCh4_Pin GPIO_PIN_5

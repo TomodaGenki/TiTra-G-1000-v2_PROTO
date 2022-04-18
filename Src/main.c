@@ -243,7 +243,6 @@ int main(void)
 			  int16_t right_speed = get_motor_ref_r();
 #endif
 			  wheel_cntrl(left_speed, right_speed);
-			  monitor_wheel_encoder();
 			  lift_cntrl();
 			  charge_proc();	// Charge Sequence
 		  }
@@ -931,7 +930,7 @@ static void MX_GPIO_Init(void)
                           |O_GreenLed_L_Pin|O_Lift1AlarmReset_Pin|O_LiftStopMode_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOH, O_AlarmCh1_Pin|O_AlarmCh2_Pin|O_AlarmCh3_Pin|O_AlarmCh4_Pin 
+  HAL_GPIO_WritePin(GPIOH, O_AlarmCh1_Pin|O_Wheel_STO_Pin|O_AlarmCh3_Pin|O_AlarmCh4_Pin 
                           |O_Lidar1In4_Pin|O_Lidar1In5_Pin|O_Lidar1In3_Pin|O_Lidar1In2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -1009,10 +1008,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : O_AlarmCh1_Pin O_AlarmCh2_Pin O_AlarmCh3_Pin O_AlarmCh4_Pin 
+  /*Configure GPIO pins : O_AlarmCh1_Pin O_Wheel_STO_Pin O_AlarmCh3_Pin O_AlarmCh4_Pin 
                            O_AddRelay_Pin O_Lidar1In4_Pin O_Lidar1In5_Pin O_Lidar1In3_Pin 
                            O_Lidar1In2_Pin */
-  GPIO_InitStruct.Pin = O_AlarmCh1_Pin|O_AlarmCh2_Pin|O_AlarmCh3_Pin|O_AlarmCh4_Pin 
+  GPIO_InitStruct.Pin = O_AlarmCh1_Pin|O_Wheel_STO_Pin|O_AlarmCh3_Pin|O_AlarmCh4_Pin 
                           |O_AddRelay_Pin|O_Lidar1In4_Pin|O_Lidar1In5_Pin|O_Lidar1In3_Pin 
                           |O_Lidar1In2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;

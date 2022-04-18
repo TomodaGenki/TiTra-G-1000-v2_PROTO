@@ -30,7 +30,6 @@ void receive_wheel_motor_data(uint8_t *receive_data, uint8_t l_r);
 void receive_wheel_motor_error_data(uint8_t *receive_data, uint8_t l_r);
 uint32_t get_l_wheel_encoder(void);
 uint32_t get_r_wheel_encoder(void);
-void monitor_wheel_encoder(void);
 
 /* define ------------------------------------------------------------*/
 // CAN ID ‚Ì’è‹`

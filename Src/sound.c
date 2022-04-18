@@ -30,9 +30,9 @@ void channel_select(uint8_t ch) {
 	}
 
 	if (ch & SOUND_CH2) {
-		HAL_GPIO_WritePin(O_AlarmCh2_GPIO_Port, O_AlarmCh2_Pin, GPIO_PIN_SET);
+		//HAL_GPIO_WritePin(O_AlarmCh2_GPIO_Port, O_AlarmCh2_Pin, GPIO_PIN_SET);
 	} else {
-		HAL_GPIO_WritePin(O_AlarmCh2_GPIO_Port, O_AlarmCh2_Pin, GPIO_PIN_RESET);
+		//HAL_GPIO_WritePin(O_AlarmCh2_GPIO_Port, O_AlarmCh2_Pin, GPIO_PIN_RESET);
 	}
 
 	if (ch & SOUND_CH3) {

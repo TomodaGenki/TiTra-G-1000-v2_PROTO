@@ -116,7 +116,7 @@ enum cntrl_timer{
 #define	CNT_PERIOD2		100					// 100msec
 #define	CNT_PERIOD3		300					// 300msec
 #define CNT_PERIOD4 	20000				// 20000msec
-#define CNT_PERIOD5 	1000				// 1000msec
+#define CNT_PERIOD5 	200				// 1000msec
 #define CNT_PERIOD6 	60000				// 60000msec
 #define CNT_CHRGROUT	20000				// 20sec
 #define CNT_IRDADOWN	5000				// 5sec

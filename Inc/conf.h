@@ -41,6 +41,10 @@
 // 0 : 無効　　1 : 有効
 #define USE_BRAKE_RELEASE	1
 
+// 異常発生時、各モーターの電源を落とすかどうかを選択するスイッチ
+// 0 : 無効　　1 : 有効
+#define EMERGE_POWER_CUT	0
+
 // 報知機の使用選択スイッチ
 // 0 : 無効　　1 : 有効
 #define SOUND_USE	1

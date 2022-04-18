@@ -1177,9 +1177,9 @@ void monitor_emerg_stop(void){
 		if (check_bumper() != 0) {
 			// bumper on?
 			emergency_status = EMERGENCY_CT0;
-//		} else if (check_timer(CNT_GO5) == TIME_UP) {
+		} else if (check_timer(CNT_GO5) == TIME_UP) {
 			// communication error with NUC?
-//			emergency_status = EMERGENCY_CT1;
+			emergency_status = EMERGENCY_CT1;
 		} else if (ck_emgncy_key() != 0) {
 			// Emergency stop button is pushed?
 			emergency_status = EMERGENCY_CT2;
@@ -1196,7 +1196,7 @@ void monitor_emerg_stop(void){
 			emergency_status = EMERGENCY_CT0;
 		} else if (check_timer(CNT_GO5) == TIME_UP) {
 			// communication error with NUC?
-//			emergency_status = EMERGENCY_CT1;
+			emergency_status = EMERGENCY_CT1;
 		} else if (ck_emgncy_key() != 0) {
 			// Emergency stop button is pushed?
 			emergency_status = EMERGENCY_CT2;
@@ -1211,7 +1211,7 @@ void monitor_emerg_stop(void){
 			emergency_status = EMERGENCY_CT0;
 		} else if (check_timer(CNT_GO5) == TIME_UP) {
 			// communication error with NUC?
-//			emergency_status = EMERGENCY_CT1;
+			emergency_status = EMERGENCY_CT1;
 		} else if (ck_emgncy_key() != 0) {
 			// Emergency stop button is pushed?
 			emergency_status = EMERGENCY_CT2;
@@ -1224,7 +1224,7 @@ void monitor_emerg_stop(void){
 			emergency_status = EMERGENCY_CT0;
 		} else if (check_timer(CNT_GO5) == TIME_UP) {
 			// communication error with NUC?
-//			emergency_status = EMERGENCY_CT1;
+			emergency_status = EMERGENCY_CT1;
 		}
 		break;
 
