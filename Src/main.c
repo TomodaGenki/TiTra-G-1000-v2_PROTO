@@ -271,6 +271,7 @@ int main(void)
 		  can1_transmit();
 		  set_utimer(CNT_TURN, CNT_TURNPERIOD);		// 1msec
 	  }
+
 	  if (check_timer(CNT_SYNCTURN) == TIME_UP) {
 		  syncturn_ctrl();
 		  set_utimer(CNT_SYNCTURN, CNT_SYNCTURN_VAL);
@@ -355,7 +356,7 @@ static void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 2;
+  hcan1.Init.Prescaler = 4;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_15TQ;
