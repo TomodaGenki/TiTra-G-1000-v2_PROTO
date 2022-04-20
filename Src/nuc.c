@@ -279,12 +279,12 @@ void HAL_UART_MakeTxData(void)
 	TxDataBuf[3] = ID_buf[1];				// Hardware ID upper
 	TxDataBuf[4] = ID_buf[0];				// Hardware ID lower
 
-	l_wheel_enc_diff = (double)((int32_t)(l_wheel_enc - l_wheel_enc_old))/ 5.0;
+	l_wheel_enc_diff = (double)((int32_t)(l_wheel_enc - l_wheel_enc_old))/ 2.0;
 	l_wheel_enc_old = l_wheel_enc;
 	TxDataBuf[5] = (uint8_t)(l_wheel_enc_diff >> 8);
 	TxDataBuf[6] = (uint8_t)l_wheel_enc_diff;
 
-	r_wheel_enc_diff = -(double)((int32_t)(r_wheel_enc - r_wheel_enc_old))/ 5.0;
+	r_wheel_enc_diff = -(double)((int32_t)(r_wheel_enc - r_wheel_enc_old))/ 2.0;
 	r_wheel_enc_old = r_wheel_enc;
 	TxDataBuf[7] = (uint8_t)(r_wheel_enc_diff >> 8);
 	TxDataBuf[8] = (uint8_t)r_wheel_enc_diff;
