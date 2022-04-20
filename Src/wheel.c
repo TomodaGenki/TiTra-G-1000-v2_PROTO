@@ -74,6 +74,8 @@ enum emcy_can_data {
 
 #define MOTOR1_ALARM	0x01
 #define MOTOR2_ALARM	0x02
+#define WHEEL_LOGSIZE	6000
+#define WHEEL_LOG_CYCLE 10		// ログ計測周期[msec]
 
 #define ENC_VAL_MAX		2147483647
 
@@ -156,6 +158,23 @@ static WHL_MTR_DATA l_motor_data;
 static WHL_MTR_DATA r_motor_data;
 static uint8_t wheel_motor_alarm = 0;
 static uint8_t wheel_stopped = 0;
+static uint8_t wheel_dump_req = 0;
+static uint8_t wheel_dump_comp = 0;
+
+#if WHEEL_LOG_DUMP
+// 開発用ログ変数
+static int16_t	ref_left = 0;
+static int16_t	ref_right = 0;
+static int16_t	log_cnt = 0;
+static int16_t	log_idx = 0;
+static int32_t	log_time[WHEEL_LOGSIZE]	= {0};
+static int16_t	log_ref_vel_r[WHEEL_LOGSIZE]	= {0};
+static int16_t	log_ref_vel_l[WHEEL_LOGSIZE] 	= {0};
+static int16_t	log_act_vel_r[WHEEL_LOGSIZE]	= {0};
+static int16_t	log_act_vel_l[WHEEL_LOGSIZE] 	= {0};
+static int32_t	log_act_dist_r[WHEEL_LOGSIZE]	= {0};
+static int32_t	log_act_dist_l[WHEEL_LOGSIZE] 	= {0};
+#endif
 /* Private functions -------------------------------------------------------- */
 uint16_t ck_l_wheel_error(void);
 uint16_t ck_r_wheel_error(void);
@@ -509,6 +528,106 @@ void wheel_set_speed(int16_t left, int16_t right) {
 
 }
 
+void wheel_log_update(){
+	// NUCからの速度指示値とエンコーダ情報をログに残す関数
+#if WHEEL_LOG_DUMP
+	static uint32_t wheel_time = 0;
+
+	// 速度指示値をm/sに直す
+	double ref_vel_r = (double)ref_right * (MAX_VELOCTY / 1000.0) / MAX_VELOCTY_ORDER;
+	double ref_vel_l = (double)ref_left * (MAX_VELOCTY / 1000.0) / MAX_VELOCTY_ORDER;
+
+
+	// 移動量の計算
+	double resolution = 1.74e-6;	// エンコーダ分解能[m]
+	uint32_t wheel_dist_right = get_r_wheel_encoder();// * resolution;;
+	uint32_t wheel_dist_left = get_l_wheel_encoder();// * resolution;
+
+	// 速度の計算
+	static uint32_t r_wheel_enc_old = 0;
+	static uint32_t l_wheel_enc_old = 0;
+	int32_t r_wheel_enc = get_r_wheel_encoder();
+	int32_t l_wheel_enc = get_l_wheel_encoder();
+	int32_t r_wheel_enc_diff = r_wheel_enc - r_wheel_enc_old;
+	int32_t l_wheel_enc_diff = l_wheel_enc - l_wheel_enc_old;
+	double wheel_vel_right= r_wheel_enc_diff * resolution / 0.01;
+	double wheel_vel_left = l_wheel_enc_diff * resolution / 0.01;
+	r_wheel_enc_old = r_wheel_enc;
+	l_wheel_enc_old = l_wheel_enc;
+
+	// ログ用配列に格納
+	if(log_cnt % WHEEL_LOG_CYCLE == 0){
+		log_time[log_idx]		= wheel_time;
+		log_ref_vel_r[log_idx]	= (int16_t)(ref_vel_r * 1000.0);
+		log_ref_vel_l[log_idx]	= (int16_t)(ref_vel_l * 1000.0);
+		log_act_vel_r[log_idx]	= (int16_t)(wheel_vel_right * 1000.0);
+		log_act_vel_l[log_idx]	= (int16_t)(wheel_vel_left * 1000.0);
+		log_act_dist_r[log_idx]	= r_wheel_enc;//(int16_t)(wheel_dist_right * 1000.0);
+		log_act_dist_l[log_idx]	= l_wheel_enc;//(int16_t)(wheel_dist_left * 1000.0);
+		if (log_idx < (WHEEL_LOGSIZE - 1)){
+			log_idx++;
+		}
+	}
+	log_cnt++;
+	wheel_time++;
+#endif
+}
+
+
+void wheel_log_dump() {
+	// ログを出力する関数
+#if WHEEL_LOG_DUMP
+	extern void uart2_transmitte(char *p);
+	char buf[600];
+
+	memset(buf, 0x00, sizeof(buf));
+	sprintf(buf, "time,ref_vel_r,ref_vel_l,act_vel_r,act_vel_l,act_dist_r,act_dist_l\r\n");
+	uart2_transmitte(buf);
+	for(int i = 0; i < WHEEL_LOGSIZE; i++) {
+		memset(buf, 0x00, sizeof(buf));
+		//             1   2   3   4   5   6   7
+		sprintf(buf, "%d, %d, %d, %d, %d, %d, %d\r\n",
+				log_time[i],			// 1
+				log_ref_vel_r[i],		// 2
+				log_ref_vel_l[i],		// 3
+				log_act_vel_r[i],		// 4
+				log_act_vel_l[i],		// 5
+				log_act_dist_r[i],		// 6
+				log_act_dist_l[i]		// 7
+				);
+		uart2_transmitte(buf);
+		if (i != 0 && log_time[i+1] == 0){
+			break;
+		}
+	}
+#endif
+	set_wheel_dump_comp();
+}
+
+void set_wheel_dump_req(){
+	wheel_dump_req = 1;
+}
+
+void reset_wheel_dump_req(){
+	wheel_dump_req = 0;
+}
+
+uint8_t get_wheel_dump_req(){
+	return wheel_dump_req;
+}
+
+void set_wheel_dump_comp(){
+	wheel_dump_comp = 1;
+}
+
+void reset_wheel_dump_comp(){
+	wheel_dump_comp = 0;
+}
+
+uint8_t get_wheel_dump_comp(){
+	return wheel_dump_comp;
+}
+
 /******************************************************************************/
 /*           Wheel motor control function									  */
 /******************************************************************************/
@@ -806,4 +925,6 @@ void wheel_cntrl(int16_t left, int16_t right) {
 
 	// デバッグ用にステータスをUARTで出力
 	//dump_master_status(master_status);
+	ref_right = right;
+	ref_left = left;
 }

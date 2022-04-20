@@ -414,7 +414,7 @@ void cmnd_proc(void){
 			break;
 
 		case WHEEL_LOG_CMD:
-//			set_wheel_dump_req();
+			set_wheel_dump_req();
 			break;
 
 		case WHEEL_TEST_LOG_CMD:

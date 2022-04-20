@@ -245,6 +245,7 @@ int main(void)
 			  wheel_cntrl(left_speed, right_speed);
 			  lift_cntrl();
 			  charge_proc();	// Charge Sequence
+			  wheel_log_update();
 		  }
 		  led_proc();
 		  set_utimer(CNT_PROCESS, CNT_PROCPERIOD);		// 10msec
@@ -267,7 +268,6 @@ int main(void)
 		  if (Is_SyncTurnning() == 0) {
 			  turn_cntrl();
 		  }
-//		  wheel_log_update();
 		  can1_transmit();
 		  set_utimer(CNT_TURN, CNT_TURNPERIOD);		// 1msec
 	  }
@@ -284,9 +284,9 @@ int main(void)
 	  else if((get_turn_dump_req() == 1) && (get_turn_dump_comp() != 1)){
 		  turn_log_dump();
 	  }
-//	  else if((get_wheel_dump_req() == 1) && (get_wheel_dump_comp() != 1)){
-//		  wheel_log_dump();
-//	  }
+	  else if((get_wheel_dump_req() == 1) && (get_wheel_dump_comp() != 1)){
+		  wheel_log_dump();
+	  }
 	  else if((get_wheel_test_dump_req() == 1) && (get_wheel_test_dump_comp() != 1)){
 		  wheel_test_log_dump();
 	  }
