@@ -30,6 +30,7 @@ void receive_wheel_motor_data(uint8_t *receive_data, uint8_t l_r);
 void receive_wheel_motor_error_data(uint8_t *receive_data, uint8_t l_r);
 uint32_t get_l_wheel_encoder(void);
 uint32_t get_r_wheel_encoder(void);
+void request_wheel_encoder(void);
 
 void wheel_log_update(void);
 void wheel_log_dump(void);
@@ -41,8 +42,6 @@ uint8_t get_wheel_dump_comp(void);
 void set_wheel_power_cut(void);
 void reset_wheel_power_cut(void);
 uint8_t get_wheel_power_cut(void);
-int32_t get_l_wheel_enc_diff(void);
-int32_t get_r_wheel_enc_diff(void);
 
 /* define ------------------------------------------------------------*/
 // CAN ID ‚Ì’è‹`

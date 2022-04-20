@@ -223,12 +223,11 @@ int main(void)
 	  {
 		  scan_proc1();
 		  load_measure();
-		  wheel_log_update();
 		  set_utimer(CNT_GO1, CNT_PERIOD1);				// 20msec
 	  }
 
 	  if (check_timer(CNT_WHEEL_ENCODER) == TIME_UP) {	// エンコーダー取得のための関数
-//		  monitor_wheel_encoder();
+		  request_wheel_encoder();
 		  set_utimer(CNT_WHEEL_ENCODER, CNT_PROCPERIOD);
 	  }
 
@@ -246,7 +245,7 @@ int main(void)
 			  wheel_cntrl(left_speed, right_speed);
 			  lift_cntrl();
 			  charge_proc();	// Charge Sequence
-			  //wheel_log_update();
+			  wheel_log_update();
 		  }
 		  led_proc();
 		  set_utimer(CNT_PROCESS, CNT_PROCPERIOD);		// 10msec

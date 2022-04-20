@@ -160,8 +160,6 @@ static uint8_t wheel_motor_alarm = 0;
 static uint8_t wheel_stopped = 0;
 static uint8_t wheel_dump_req = 0;
 static uint8_t wheel_dump_comp = 0;
-int32_t l_wheel_enc_diff = 0;
-int32_t r_wheel_enc_diff = 0;
 
 #if WHEEL_LOG_DUMP
 // 開発用ログ変数
@@ -181,13 +179,6 @@ static int32_t	log_act_dist_l[WHEEL_LOGSIZE] 	= {0};
 uint16_t ck_l_wheel_error(void);
 uint16_t ck_r_wheel_error(void);
 
-int32_t get_l_wheel_enc_diff(void){
-	return l_wheel_enc_diff;
-}
-
-int32_t get_r_wheel_enc_diff(void){
-	return r_wheel_enc_diff;
-}
 /******************************************************************************/
 /*           Wheel motor GPIO control function								  */
 /******************************************************************************/
@@ -557,8 +548,8 @@ void wheel_log_update(){
 	static uint32_t l_wheel_enc_old = 0;
 	int32_t r_wheel_enc = get_r_wheel_encoder();
 	int32_t l_wheel_enc = get_l_wheel_encoder();
-	r_wheel_enc_diff = r_wheel_enc - r_wheel_enc_old;
-	l_wheel_enc_diff = l_wheel_enc - l_wheel_enc_old;
+	int32_t r_wheel_enc_diff = r_wheel_enc - r_wheel_enc_old;
+	int32_t l_wheel_enc_diff = l_wheel_enc - l_wheel_enc_old;
 	double wheel_vel_right= r_wheel_enc_diff * resolution / 0.01;
 	double wheel_vel_left = l_wheel_enc_diff * resolution / 0.01;
 	r_wheel_enc_old = r_wheel_enc;
@@ -640,7 +631,7 @@ uint8_t get_wheel_dump_comp(){
 /******************************************************************************/
 /*           Wheel motor control function									  */
 /******************************************************************************/
-void request_wheel_encoder(uint8_t status) {
+void request_wheel_encoder(void) {
 	// エンコーダ情報の要求
 	transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), READ_REQ, ENCODER_OBJ, SUB_INDEX_0, READ_DATA);
 	transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), READ_REQ, ENCODER_OBJ, SUB_INDEX_0, READ_DATA);
@@ -826,7 +817,6 @@ void wheel_cntrl(int16_t left, int16_t right) {
 	static uint8_t master_status = NOT_READY_TO_SWITCH_ON;
 	// モーターから受信したステータスワードに従い状態遷移させる
 	master_status = get_master_status();
-	request_wheel_encoder(master_status);
 	read_brake_mode();
 
 	switch(master_status) {
