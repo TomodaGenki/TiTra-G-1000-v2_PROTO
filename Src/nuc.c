@@ -278,15 +278,25 @@ void HAL_UART_MakeTxData(void)
 	TxDataBuf[3] = ID_buf[1];				// Hardware ID upper
 	TxDataBuf[4] = ID_buf[0];				// Hardware ID lower
 
-	wheel_enc_diff = l_wheel_enc - l_wheel_enc_old;
+	//wheel_enc_diff = l_wheel_enc - l_wheel_enc_old;
+	//l_wheel_enc_old = l_wheel_enc;
+	//TxDataBuf[5] = (uint8_t)(wheel_enc_diff >> 8);
+	//TxDataBuf[6] = (uint8_t)wheel_enc_diff;
+	//int16_t l_diff =  (double)((int32_t)(l_wheel_enc - l_wheel_enc_old))/ 2.0;
+	int16_t l_diff =  (double)(get_l_wheel_enc_diff())/ 2.0;
 	l_wheel_enc_old = l_wheel_enc;
-	TxDataBuf[5] = (uint8_t)(wheel_enc_diff >> 8);
-	TxDataBuf[6] = (uint8_t)wheel_enc_diff;
+	TxDataBuf[5] = (int8_t)(l_diff >> 8);
+	TxDataBuf[6] = (int8_t)l_diff;
 
-	wheel_enc_diff = r_wheel_enc_old - r_wheel_enc;
+	//wheel_enc_diff = r_wheel_enc_old - r_wheel_enc;
+	//r_wheel_enc_old = r_wheel_enc;
+	//TxDataBuf[7] = (uint8_t)(wheel_enc_diff >> 8);
+	//TxDataBuf[8] = (uint8_t)wheel_enc_diff;
+	//int16_t r_diff =  (double)((int32_t)(r_wheel_enc - r_wheel_enc_old))/ 2.0;
+	int16_t r_diff =  (double)(get_r_wheel_enc_diff())/ 2.0;
 	r_wheel_enc_old = r_wheel_enc;
-	TxDataBuf[7] = (uint8_t)(wheel_enc_diff >> 8);
-	TxDataBuf[8] = (uint8_t)wheel_enc_diff;
+	TxDataBuf[7] = (int8_t)(-r_diff >> 8);
+	TxDataBuf[8] = (int8_t)(-r_diff);
 
 	TxDataBuf[9] = get_mcu_state();
 	TxDataBuf[9] |= com_err_bit;

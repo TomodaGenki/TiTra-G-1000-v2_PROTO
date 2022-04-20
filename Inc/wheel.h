@@ -41,6 +41,8 @@ uint8_t get_wheel_dump_comp(void);
 void set_wheel_power_cut(void);
 void reset_wheel_power_cut(void);
 uint8_t get_wheel_power_cut(void);
+int32_t get_l_wheel_enc_diff(void);
+int32_t get_r_wheel_enc_diff(void);
 
 /* define ------------------------------------------------------------*/
 // CAN ID ‚Ì’è‹`
