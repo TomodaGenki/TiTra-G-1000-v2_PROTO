@@ -18,7 +18,6 @@ void recover_alarm(void);
 void recover_motor1_alarm(void);
 void recover_motor2_alarm(void);
 void reset_motor_alarm_auto(void);
-void wheel_init(void);
 uint8_t ck_wheel1_motor_alarm(void);
 uint8_t ck_wheel2_motor_alarm(void);
 void scan_wheelmotor_alarm(void);
@@ -31,6 +30,9 @@ void receive_wheel_motor_error_data(uint8_t *receive_data, uint8_t l_r);
 uint32_t get_l_wheel_encoder(void);
 uint32_t get_r_wheel_encoder(void);
 void request_wheel_encoder(void);
+void set_can_trans_start(void);
+void reset_can_trans_start(void);
+uint8_t get_can_trans_start(void);
 
 void wheel_log_update(void);
 void wheel_log_dump(void);

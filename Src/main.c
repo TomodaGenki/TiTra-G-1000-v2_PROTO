@@ -227,22 +227,12 @@ int main(void)
 	  }
 
 	  if (check_timer(CNT_WHEEL_ENCODER) == TIME_UP) {	// エンコーダー取得のための関数
-		  request_wheel_encoder();
 		  set_utimer(CNT_WHEEL_ENCODER, CNT_PROCPERIOD);
 	  }
 
 	  if (check_timer(CNT_PROCESS) == TIME_UP)
 	  {
 		  if (!Is_SyncTurnning()) {
-#if WHEEL_TEST == 0
-              int16_t left_speed = get_LeftWheel_Speed();
-              int16_t right_speed = get_RightWheel_Speed();
-#else
-			  wheel_test_main();
-			  int16_t left_speed = get_motor_ref_l();
-			  int16_t right_speed = get_motor_ref_r();
-#endif
-			  wheel_cntrl(left_speed, right_speed);
 			  lift_cntrl();
 			  charge_proc();	// Charge Sequence
 			  wheel_log_update();
@@ -254,8 +244,11 @@ int main(void)
 	  if (check_timer(CNT_GO7) == TIME_UP)
 	  {
 		  check_nuc_receive_data();
-		  ck_motor_receive_data();
-		  set_utimer(CNT_GO7, CNT_2MSEC);				// 2msec
+		  int16_t left_speed = get_LeftWheel_Speed();
+		  int16_t right_speed = get_RightWheel_Speed();
+		  wheel_cntrl(left_speed, right_speed);
+		  //ck_motor_receive_data();
+		  set_utimer(CNT_GO7, CNT_1MSEC);				// 1msec
 	  }
 
 	  if (get_i2c2_init() != 0) {
@@ -268,7 +261,6 @@ int main(void)
 		  if (Is_SyncTurnning() == 0) {
 			  turn_cntrl();
 		  }
-		  can1_transmit();
 		  set_utimer(CNT_TURN, CNT_TURNPERIOD);		// 1msec
 	  }
 

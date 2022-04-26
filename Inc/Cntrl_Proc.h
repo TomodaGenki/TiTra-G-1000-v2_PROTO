@@ -116,7 +116,7 @@ enum cntrl_timer{
 #define	CNT_PERIOD2		100					// 100msec
 #define	CNT_PERIOD3		300					// 300msec
 #define CNT_PERIOD4 	20000				// 20000msec
-#define CNT_PERIOD5 	1000				// 1000msec
+#define CNT_PERIOD5 	500					// 500msec
 #define CNT_PERIOD6 	60000				// 60000msec
 #define CNT_CHRGROUT	20000				// 20sec
 #define CNT_IRDADOWN	5000				// 5sec
@@ -131,7 +131,7 @@ enum cntrl_timer{
 #define RESET_WAIT_TIMER	10000
 #define WHEEL_MOTOR_WAKE_UP		10000
 #define WHEEL_CAN_WAIT_TIME		50
-#define CNT_2MSEC		2					// 2msec
+#define CNT_1MSEC		1					// 1msec
 
 #define	BIT07				0x80
 #define	BIT06				0x40

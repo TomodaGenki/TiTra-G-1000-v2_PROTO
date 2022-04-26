@@ -144,7 +144,7 @@ void init_timer(void){
 	set_utimer(CNT_GO4, CNT_PERIOD4);
 	set_utimer(CNT_GO5, CNT_PERIOD6);		// for NUC start up
 	set_utimer(CNT_GO6, CNT_PERIOD5);		// for Charge Seaquence
-	set_utimer(CNT_GO7, CNT_2MSEC);
+	set_utimer(CNT_GO7, CNT_1MSEC);
 	set_utimer(CDT_CHRGROUT, CNT_CHRGROUT);	// for Charge Seaquence
 	set_utimer(CNT_TURN, CNT_TURNPERIOD);
 	set_utimer(CNT_MOTOR_WAKEUP, MOTOR_WAKEUP_START);

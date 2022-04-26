@@ -400,6 +400,9 @@ void check_nuc_receive_data(void) {
 				HAL_UART_MakeTxData();
 				set_utimer(CNT_GO5, CNT_PERIOD5);
 				set_com_start_flag();
+
+				// NUCからの電文受信完了したらcanの送信を開始する
+				set_can_trans_start();
 			} else {
 				// デバック用データ受信
 				for (int i = 0 ; i < RxBufSize ; i++){

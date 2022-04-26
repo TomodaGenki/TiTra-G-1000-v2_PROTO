@@ -126,6 +126,9 @@ enum emcy_can_data {
 #define SAFETY					0xFF
 // 左右のモーターのステータスが同期しない時
 #define SYNC_ERR				0xFE
+// この実装独自のステータス
+#define SWITCHED_ON_BRK_ON		0x24
+#define SWITCHED_ON_BRK_OFF		0x25
 // ステータスワードからステータスを取得するためのマスク
 #define STATUS_MASK1	0x4F
 #define STATUS_MASK2	0x6F
@@ -160,6 +163,7 @@ static uint8_t wheel_motor_alarm = 0;
 static uint8_t wheel_stopped = 0;
 static uint8_t wheel_dump_req = 0;
 static uint8_t wheel_dump_comp = 0;
+static uint8_t flg_can_trans_start = 0;
 
 #if WHEEL_LOG_DUMP
 // 開発用ログ変数
@@ -286,7 +290,8 @@ uint8_t transmit_motor_control_data(uint16_t id, uint8_t request, uint16_t index
 	tx_data[6] = tx_cnv.b_val[2];
 	tx_data[7] = tx_cnv.b_val[3];
 
-	ret = can1_enque(id, tx_data);
+	can1_transmit(id, tx_data);
+	ret = 1;
 
 	return ret;
 }
@@ -338,6 +343,37 @@ void receive_wheel_motor_data(uint8_t *receive_data, uint8_t l_r) {
 	case ENCODER_OBJ:
 		motor_data->whl_encoder = -1 * rx_cnv.l_val;//符合を反転させる
 		break;
+	}
+
+	// 応答チェック用
+	volatile uint8_t dumm = 0;
+	if(l_r == L_WHEEL_ID){
+		switch(index) {
+		case STATUS_WORD:
+			dumm++;
+			break;
+		case DRIVE_MODE:
+			dumm++;
+			break;
+		case ACCEL_PROFILE:
+			dumm++;
+			break;
+		case DECEL_PROFILE:
+			dumm++;
+			break;
+		case POLARITY_OBJ:
+			dumm++;
+			break;
+		case D_BRAKE_PRAM:
+			dumm++;
+			break;
+		case BRAKE_PARAM:
+			dumm++;
+			break;
+		case TARGET_SPEED:
+			dumm++;
+			break;
+		}
 	}
 }
 
@@ -403,6 +439,17 @@ uint32_t get_r_wheel_encoder(void) {
 	return r_motor_data.whl_encoder;
 }
 
+void set_can_trans_start(){
+	flg_can_trans_start = 1;
+}
+
+void reset_can_trans_start(){
+	flg_can_trans_start = 0;
+}
+
+uint8_t get_can_trans_start(){
+	return flg_can_trans_start;
+}
 
 void set_STO(){
 	HAL_GPIO_WritePin(O_Wheel_STO_GPIO_Port, O_Wheel_STO_Pin, GPIO_PIN_SET);
@@ -518,15 +565,6 @@ int32_t calc_wheel_speed(int16_t order) {
 	return (int32_t)rotation_speed;
 }
 
-void wheel_set_speed(int16_t left, int16_t right) {
-
-	int32_t l_wheel_rot = calc_wheel_speed(left);
-	int32_t r_wheel_rot = calc_wheel_speed(right);
-
-	transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_4B, TARGET_SPEED, SUB_INDEX_0, l_wheel_rot);
-	transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_4B, TARGET_SPEED, SUB_INDEX_0, r_wheel_rot);
-
-}
 
 void wheel_log_update(){
 	// NUCからの速度指示値とエンコーダ情報をログに残す関数
@@ -667,111 +705,278 @@ uint8_t ck_wheel_stopped(void){
 	return wheel_stopped;
 }
 
-uint8_t wheel_param_set(void) {
 
-	static uint8_t parameter_set = Set_Drive_Mode;
-	uint8_t result = 0;
-	uint8_t ret = 0;
+void wheel_cntrl(int16_t left, int16_t right){
+	// can送信タイミングを制御する関数
+	// この関数は1msec周期でmainからコールされる
+	static uint8_t trans_phase = 0;
+	static uint8_t wheel_status = NOT_READY_TO_SWITCH_ON;
+	uint16_t l_wheel_status = 0;
+	uint16_t r_wheel_status = 0;
 
-	if(parameter_set == Set_Drive_Mode){
-		// 運転モードを速度プロファイルモードに設定
-		result = set_drive_mode(SPD_PROFILE_MODE);
-		if(result == 1){
-			parameter_set++;
-		}
-	}
-	else if (parameter_set == Set_Accel) {
-		// 加速度を設定
-		transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_4B, ACCEL_PROFILE, SUB_INDEX_0, ACCEL_RATE);
-		transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_4B, ACCEL_PROFILE, SUB_INDEX_0, ACCEL_RATE);
-		parameter_set++;
-	} else if (parameter_set == Set_Decel) {
-		// 減速度を設定
-		transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_4B, DECEL_PROFILE, SUB_INDEX_0, DECEL_RATE);
-		transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_4B, DECEL_PROFILE, SUB_INDEX_0, DECEL_RATE);
-		parameter_set++;
-	} else if (parameter_set == Set_Polarity) {
-		// 左モーターの極性を反転させる
-		result = transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_1B, POLARITY_OBJ, SUB_INDEX_0, POLARITY_REV);
-		if (result == 1) {
-			parameter_set++;
-		}
-	} else if(parameter_set == Set_D_Brk){
-		// ダイナミックブレーキを有効にする
-		transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_1, D_BRK_ENABLE);
-		transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_1, D_BRK_ENABLE);
-		parameter_set++;
-	} else if(parameter_set == Set_D_Brk_Decel){
-		// ダイナミックブレーキの減速度を設定
-		transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_4, D_BRK_DECEL);
-		transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_4, D_BRK_DECEL);
-		parameter_set++;
-	} else if (parameter_set == Param_Num) {
-		// 設定完了
-		ret = 1;
-		parameter_set = Set_Accel;
-	}
-	return ret;
-}
+	switch(wheel_status){
+	case NOT_READY_TO_SWITCH_ON:
+		// ステータスワードのリードリクエスト
+		read_status_word();
+		// ステータスを確認して状態遷移
+		l_wheel_status = get_l_wheel_status();
+		r_wheel_status = get_r_wheel_status();
+		//if((l_wheel_status & STATUS_MASK1) == SWITCH_ON_DISABLE
+		//		&& (r_wheel_status & STATUS_MASK1) == SWITCH_ON_DISABLE){
+			wheel_status = SWITCH_ON_DISABLE;
+			trans_phase = 0;
+		//}
+		break;
 
-void wheel_init(void) {
-
-}
-
-
-static uint8_t get_master_status(void){
-	static uint8_t status = NOT_READY_TO_SWITCH_ON;
-	static uint16_t unko_timer = 0;
-
-	// ステータスワードのリード要求
-	read_status_word();
-	// 左右モーターのステータスに応じてマスターのステータスを決定
-	uint16_t l_wheel_status = get_l_wheel_status();
-	uint16_t r_wheel_status = get_r_wheel_status();
-
-	if(l_wheel_status == r_wheel_status){
-		if(l_wheel_status & SAFETY_MASK){
-			status = SAFETY;
+	case SWITCH_ON_DISABLE:
+		if(trans_phase == 0){
+			// READY_TO_SWITCH_ONへ遷移要求
+			set_control_word(SHUT_DOWN);
+			trans_phase++;
 		}
-		else if((l_wheel_status & STATUS_MASK1) == NOT_READY_TO_SWITCH_ON){
-			status = NOT_READY_TO_SWITCH_ON;
+		else if(trans_phase < 10){
+			// 待機
+			trans_phase++;
 		}
-		else if((l_wheel_status & STATUS_MASK1) == SWITCH_ON_DISABLE){
-			status = SWITCH_ON_DISABLE;
+		else if(trans_phase == 10){
+			// ステータスワードのリードリクエスト
+			read_status_word();
+			trans_phase++;
 		}
-		else if((l_wheel_status & STATUS_MASK2) == READY_TO_SWITCH_ON){
-			status = READY_TO_SWITCH_ON;
-		}
-		else if((l_wheel_status & STATUS_MASK2) == SWITCHED_ON){
-			status = SWITCHED_ON;
-		}
-		else if((l_wheel_status & STATUS_MASK2) == OPERATION_ENABLED){
-			status = OPERATION_ENABLED;
-		}
-		else if((l_wheel_status & STATUS_MASK2) == QUICK_STOP_ACTIVE){
-			status = QUICK_STOP_ACTIVE;
-		}
-		else if((l_wheel_status & STATUS_MASK1) == FAULT_REACTION_ACTIVE){
-			status = FAULT_REACTION_ACTIVE;
-		}
-		else if((l_wheel_status & STATUS_MASK1) == FAULT){
-			status = FAULT;
-		}
-		// タイマーリセット
-		unko_timer = 0;
-	}
-	else{
-		// 左右モーターのステータスが異なるまま時間が経過したら同期エラーとする
-		if(unko_timer >= 500){
-			status = SYNC_ERR;
+		else if(trans_phase < 20){
+			// 待機
+			trans_phase++;
 		}
 		else{
-			unko_timer++;
+			// ステータスを確認して状態遷移
+			l_wheel_status = get_l_wheel_status();
+			r_wheel_status = get_r_wheel_status();
+			if((l_wheel_status & STATUS_MASK2) == READY_TO_SWITCH_ON
+					&& (r_wheel_status & STATUS_MASK2) == READY_TO_SWITCH_ON){
+				wheel_status = READY_TO_SWITCH_ON;
+				trans_phase = 0;
+			}
+			else{
+				// ステータスが変わってなかったらやり直し
+				trans_phase = 0;
+			}
 		}
-	}
+		break;
 
-	return status;
+	case READY_TO_SWITCH_ON:
+		// 運転モードとパラメーターを設定
+		if(trans_phase == 0){
+			// 運転モードを速度プロファイルモードに設定
+			transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_1B, DRIVE_MODE, SUB_INDEX_0, SPD_PROFILE_MODE);
+			transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_1B, DRIVE_MODE, SUB_INDEX_0, SPD_PROFILE_MODE);
+			trans_phase++;
+		}
+		else if(trans_phase < 10){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 10){
+			// 加速度を設定
+			transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_4B, ACCEL_PROFILE, SUB_INDEX_0, ACCEL_RATE);
+			transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_4B, ACCEL_PROFILE, SUB_INDEX_0, ACCEL_RATE);
+			trans_phase++;
+		}
+		else if(trans_phase < 20){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 20){
+			// 減速度を設定
+			transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_4B, DECEL_PROFILE, SUB_INDEX_0, DECEL_RATE);
+			transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_4B, DECEL_PROFILE, SUB_INDEX_0, DECEL_RATE);
+			trans_phase++;
+		}
+		else if(trans_phase < 30){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 30){
+			// 左モーターの極性反転
+			transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_1B, POLARITY_OBJ, SUB_INDEX_0, POLARITY_REV);
+			trans_phase++;
+		}
+		else if(trans_phase < 40){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 40){
+			// ダイナミックブレーキを有効にする
+			transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_1, D_BRK_ENABLE);
+			transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_2B, D_BRAKE_PRAM, SUB_INDEX_1, D_BRK_ENABLE);
+			trans_phase++;
+		}
+		else if(trans_phase < 50){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 50){
+			// 設定完了したらSWITCHED_ONへ遷移要求
+			transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_2B, CNTRL_WORD, SUB_INDEX_0, SWITCH_ON);
+			transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_2B, CNTRL_WORD, SUB_INDEX_0, SWITCH_ON);
+			trans_phase++;
+		}
+		else if(trans_phase < 60){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 60){
+			// ステータスワードのリードリクエスト
+			read_status_word();
+			trans_phase++;
+		}
+		else if(trans_phase < 70){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 70){
+			// ステータスを確認して状態遷移
+			l_wheel_status = get_l_wheel_status();
+			r_wheel_status = get_r_wheel_status();
+			if((l_wheel_status & STATUS_MASK2) == SWITCHED_ON
+					&& (r_wheel_status & STATUS_MASK2) == SWITCHED_ON){
+				if(check_wheel_brake() == 0){
+					wheel_status = SWITCHED_ON_BRK_ON;
+				}
+				else{
+					wheel_status = SWITCHED_ON_BRK_OFF;
+				}
+			}
+			trans_phase = 0;
+		}
+		break;
+
+	case SWITCHED_ON_BRK_ON:
+		if(check_wheel_brake() != 0){
+			wheel_status = SWITCHED_ON_BRK_OFF;
+			trans_phase = 0;
+		}
+		else if(trans_phase == 0){
+			if(ck_emerg_stop() == NOT_EMERGENCY){
+				// エラーが無ければOPERATION_ENABLEDへの遷移を開始する
+				trans_phase++;
+			}
+		}
+		else if(trans_phase == 1){
+			// ブレーキモードを自動に変更
+			change_wheel_brake_mode(AUTO_BRAKE);
+			trans_phase++;
+		}
+		else if(trans_phase < 3){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 3){
+			//　OPERATION_ENABLEDへ遷移要求
+			set_control_word(ENABLE_OPERATION);
+			trans_phase++;
+		}
+		else if(trans_phase < 5){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 5){
+			//　ステータスワードのリードリクエスト
+			read_status_word();
+			trans_phase++;
+		}
+		else if(trans_phase < 7){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 7){
+			l_wheel_status = get_l_wheel_status();
+			r_wheel_status = get_r_wheel_status();
+			if((l_wheel_status & STATUS_MASK2) == OPERATION_ENABLED
+				&& (r_wheel_status & STATUS_MASK2) == OPERATION_ENABLED){
+				wheel_status = OPERATION_ENABLED;
+			}
+			trans_phase = 0;
+		}
+		break;
+
+	case SWITCHED_ON_BRK_OFF:
+		if(trans_phase == 0){
+			// ブレーキモードを手動に変更
+			change_wheel_brake_mode(MANUAL_BRAKE);
+			trans_phase++;
+		}
+		else if(trans_phase < 3){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 3){
+			//　ブレーキ解放
+			wheel_set_brake(BRAKE_OFF);
+			trans_phase++;
+		}
+		else if(trans_phase < 5){
+			// 待機
+			trans_phase++;
+		}
+		else if(trans_phase == 5){
+			if(check_wheel_brake() == 0){
+				// ブレーキ解放要求が無ければSWITCHED_ON_BRK_ONへ遷移
+				wheel_set_brake(BRAKE_ON);
+				wheel_status = SWITCHED_ON_BRK_ON;
+			}
+			trans_phase = 0;
+		}
+		break;
+
+	case OPERATION_ENABLED:
+		if(ck_emerg_stop() != NOT_EMERGENCY){
+			// エラー発生時はモーターのステータスを遷移させて急ブレーキをかける
+			set_control_word(DISABLE_OPERATION);
+			wheel_status = SWITCHED_ON_BRK_ON;
+			trans_phase = 0;
+		}
+		else if(check_wheel_brake() != 0){
+			// ブレーキ解放要求
+			set_control_word(DISABLE_OPERATION);
+			wheel_status = SWITCHED_ON_BRK_OFF;
+			trans_phase = 0;
+		}
+		else if(get_can_trans_start()){
+			// NUCからの電文受信時
+			if(trans_phase == 0){
+				// 左モーターへ速度指示
+				int32_t l_wheel_rot = calc_wheel_speed(left);
+				transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), WRITE_REQ_4B, TARGET_SPEED, SUB_INDEX_0, l_wheel_rot);
+				trans_phase++;
+			}
+			else if(trans_phase == 1){
+				// 右モーターへ速度指示
+				int32_t r_wheel_rot = calc_wheel_speed(right);
+				transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), WRITE_REQ_4B, TARGET_SPEED, SUB_INDEX_0, r_wheel_rot);
+				trans_phase++;
+			}
+			else if(trans_phase < 15){
+				// 一定時間待機
+				trans_phase++;
+			}
+			else if(trans_phase == 15){
+				// 左モーターへエンコーダリクエスト
+				transmit_motor_control_data((SDO_TX_ID + L_WHEEL_ID), READ_REQ, ENCODER_OBJ, SUB_INDEX_0, READ_DATA);
+				trans_phase++;
+			}
+			else if(trans_phase == 16){
+				// 右モーターへエンコーダリクエスト
+				transmit_motor_control_data((SDO_TX_ID + R_WHEEL_ID), READ_REQ, ENCODER_OBJ, SUB_INDEX_0, READ_DATA);
+				trans_phase = 0;
+				reset_can_trans_start();
+			}
+		}
+		break;
+	}
+	ref_right = right;
+	ref_left = left;
 }
+
 
 void dump_master_status(uint8_t status){
 	// デバッグ用に現在のステータスを出力する
@@ -810,120 +1015,4 @@ void dump_master_status(uint8_t status){
 		sprintf(buf1, "Wheel master status:  SYNC_ERR\r\n");
 	}
 	uart2_transmitte(buf1);
-}
-
-void wheel_cntrl(int16_t left, int16_t right) {
-
-	static uint8_t master_status = NOT_READY_TO_SWITCH_ON;
-	// モーターから受信したステータスワードに従い状態遷移させる
-	master_status = get_master_status();
-	read_brake_mode();
-
-	switch(master_status) {
-	case NOT_READY_TO_SWITCH_ON:
-		// モーターが起動するのを待つ
-		break;
-
-	case SWITCH_ON_DISABLE:
-		if (ck_emerg_stop() != NOT_EMERGENCY) {
-			//set_STO();
-		}
-		else{
-			// READY_TO_SWITCH_ONへ遷移要求
-			set_control_word(SHUT_DOWN);
-		}
-		break;
-
-	case READY_TO_SWITCH_ON:
-		// 運転モードとパラメーターを設定
-		if(ck_emerg_stop() != NOT_EMERGENCY){
-			set_control_word(DISABLE_VOLTAGE);
-			//set_STO();
-		}
-		else if (wheel_param_set() != 0 ) {
-			// 設定完了したらSWITCHED_ONへ遷移要求
-			set_control_word(SWITCH_ON);
-		}
-		break;
-
-	case SWITCHED_ON:
-		if(ck_emerg_stop() != NOT_EMERGENCY){
-			set_control_word(DISABLE_VOLTAGE);
-			//set_STO();
-		}
-		else if (check_wheel_brake() == 0) {
-			set_control_word(ENABLE_OPERATION);
-		}
-		break;
-
-	case OPERATION_ENABLED:
-		if(ck_emerg_stop() != NOT_EMERGENCY){
-			set_control_word(DISABLE_VOLTAGE);
-			//set_STO();
-		}
-		else if(check_wheel_brake() != 0){
-			// メカブレーキを解除するためSWITCHED_ONへ遷移要求
-			set_control_word(DISABLE_OPERATION);
-		}
-		else if((ck_l_wheel_brake_mode() == AUTO_BRAKE) && (ck_r_wheel_brake_mode() == AUTO_BRAKE)){
-			// モーター回転
-			wheel_set_speed(left, right);
-		}
-		else{
-			wheel_set_speed(0, 0);
-		}
-		break;
-
-	case QUICK_STOP_ACTIVE:
-		// このステータスは通らないはず
-		break;
-	case FAULT_REACTION_ACTIVE:
-		// モータードライバーエラーとする
-		// リセットSWが押されたらSWITCH_ON_DISABLEに遷移させる予定
-		break;
-	case FAULT:
-		// モータードライバーエラーとする
-		// リセットSWが押されたらSWITCH_ON_DISABLEに遷移させる予定
-		break;
-	case SAFETY:
-		if (ck_emerg_stop() == NOT_EMERGENCY) {
-			// エラーが解除されたらSTO無効化 & SWITCH_ON_DISABLEへ遷移させる
-			reset_STO();
-			set_control_word(DISABLE_VOLTAGE);
-		}
-		else {
-		}
-		break;
-	case SYNC_ERR:
-		// モータードライバーエラーとする
-		// リセットSWが押されたらSWITCH_ON_DISABLEに遷移させる予定
-		break;
-	}
-
-	// 停止中か判定
-	judge_wheel_stopped();
-	// メカブレーキの制御
-	if(master_status == OPERATION_ENABLED){
-		// OPERATION_ENABLEDではメカブレーキを自動モードに設定
-		if((ck_l_wheel_brake_mode() != AUTO_BRAKE) || (ck_r_wheel_brake_mode() != AUTO_BRAKE)){
-			change_wheel_brake_mode(AUTO_BRAKE);
-		}
-	}
-	else if((master_status != NOT_READY_TO_SWITCH_ON) && (ck_wheel_stopped() != 0)){
-		// OPERATION_ENABLED以外で停止中はメカブレーキを手動に設定
-		change_wheel_brake_mode(MANUAL_BRAKE);
-		if(check_wheel_brake() != 0){
-			// メカブレーキ解除要求
-			wheel_set_brake(BRAKE_OFF);
-		}
-		else{
-			// メカブレーキ作動要求
-			wheel_set_brake(BRAKE_ON);
-		}
-	}
-
-	// デバッグ用にステータスをUARTで出力
-	//dump_master_status(master_status);
-	ref_right = right;
-	ref_left = left;
 }

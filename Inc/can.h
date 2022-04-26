@@ -10,9 +10,7 @@
 
 /* function ----------------------------------------------------------*/
 void can_filter_setting(void);
-HAL_StatusTypeDef can1_transmit(void);
-uint8_t can1_enque(uint16_t id, uint8_t *pdata);
-uint8_t can1_deque(uint16_t *p_id, uint8_t *pdata);
+HAL_StatusTypeDef can1_transmit(uint16_t id, uint8_t *pdata);
 
 /* define ------------------------------------------------------------*/
 

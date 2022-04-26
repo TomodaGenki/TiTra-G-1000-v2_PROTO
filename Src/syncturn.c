@@ -563,12 +563,12 @@ static void sync_motor_ctrl() {
 //		wheel_set_freerun(0);
 //		wheel_set_brake(0);
 //		wheel_set_dc_lock(0);
-		wheel_set_speed(wheel_ref, wheel_ref);
+		//wheel_set_speed(wheel_ref, wheel_ref);
 	}
 	else{						//ブレーキ区間
 //		wheel_set_freerun(0);
 //		wheel_set_dc_lock(0);
-		wheel_set_speed(0, 0);
+		//wheel_set_speed(0, 0);
 		if(g_flg_brake_permission > 0){
 			// 速度がしきい値以下になってからブレーキをかける
 //			wheel_set_brake(1);
@@ -1280,7 +1280,7 @@ void syncturn_stop() {
 //	wheel_set_freerun(0);
 //	wheel_set_brake(1);
 //	wheel_set_dc_lock(0);
-	wheel_set_speed(0, 0);
+	//wheel_set_speed(0, 0);
 	turn_motor_stop();
 	t_set_brake();
 	sycturn_direction(STOP, 0);
